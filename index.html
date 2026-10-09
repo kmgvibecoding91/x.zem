@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ЖерТап — реестр земель КХ</title>
+<style>
+:root{
+  --bg:#f6f4ee; --surface:#ffffff; --surface-2:#f0ede4; --border:#e2ddd0;
+  --text:#1f2a1f; --muted:#5f6b5c; --accent:#2f7a3e; --accent-2:#e3f1e2; --accent-text:#ffffff;
+  --gold:#c08a1e; --gold-2:#fbf1da; --red:#b8463a; --red-2:#f8e3df; --blue:#2f6fa8; --blue-2:#e0ecf7;
+  --gray:#7d8579; --gray-2:#ebece8;
+  --st-free:#3f9c4f; --st-contest:#d39a23; --st-claimed:#2f6fa8; --st-granted:#8a8f86;
+  --map-bg:#e9e4d3; --map-river:#8cbbe0; --map-road:#c9bfa3;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.06);
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141814; --surface:#1d221d; --surface-2:#252b24; --border:#323a31;
+    --text:#e7ebe3; --muted:#a3ad9f; --accent:#5cb86c; --accent-2:#22362a; --accent-text:#0e140e;
+    --gold:#e2b04a; --gold-2:#3a301b; --red:#e07a6e; --red-2:#3c2320; --blue:#6ea8dd; --blue-2:#1d2d3c;
+    --gray:#9aa196; --gray-2:#2b302a;
+    --st-free:#5cb86c; --st-contest:#e2b04a; --st-claimed:#6ea8dd; --st-granted:#8d938a;
+    --map-bg:#232a22; --map-river:#355d80; --map-road:#4a4636;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141814; --surface:#1d221d; --surface-2:#252b24; --border:#323a31;
+  --text:#e7ebe3; --muted:#a3ad9f; --accent:#5cb86c; --accent-2:#22362a; --accent-text:#0e140e;
+  --gold:#e2b04a; --gold-2:#3a301b; --red:#e07a6e; --red-2:#3c2320; --blue:#6ea8dd; --blue-2:#1d2d3c;
+  --gray:#9aa196; --gray-2:#2b302a;
+  --st-free:#5cb86c; --st-contest:#e2b04a; --st-claimed:#6ea8dd; --st-granted:#8d938a;
+  --map-bg:#232a22; --map-river:#355d80; --map-road:#4a4636;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+h1,h2,h3{line-height:1.2;margin:0}
+h2{font-size:26px;margin-bottom:6px}
+h3{font-size:16px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;gap:16px;height:56px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;white-space:nowrap}
+.logo-mark{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:var(--accent-text);font-size:15px}
+.nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px;font-size:14px;white-space:nowrap}
+.nav-links a:hover{background:var(--surface-2);color:var(--text)}
+.icon-btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;width:34px;height:34px;cursor:pointer;flex:none}
+
+section{padding:56px 0 8px}
+.sec-head{margin-bottom:22px;max-width:760px}
+.sec-num{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.note{margin-top:16px;padding:12px 14px;border-left:3px solid var(--gold);background:var(--gold-2);border-radius:0 10px 10px 0;font-size:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--muted);font-weight:600}
+.flash{animation:flash 1.6s ease}
+@keyframes flash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 40%,transparent)}}
+
+/* hero */
+.hero{padding:48px 0 16px}
+.hero-top{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.hero h1{font-size:clamp(28px,4.5vw,44px);max-width:860px;letter-spacing:-.01em}
+.hero p.lead{font-size:18px;color:var(--muted);max-width:760px;margin:14px 0 24px}
+.hero-cta{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-text);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn.ghost{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn:disabled{opacity:.5;cursor:default}
+.problem .n{width:30px;height:30px;border-radius:50%;background:var(--red-2);color:var(--red);font-weight:700;display:grid;place-items:center;margin-bottom:10px}
+.problem p{margin:6px 0 0;color:var(--muted);font-size:14px}
+
+/* metrics */
+.metric .val{font-size:30px;font-weight:750;color:var(--accent);letter-spacing:-.02em}
+.metric .lbl{font-size:14px;margin-top:4px}
+.metric .bar{height:6px;background:var(--surface-2);border-radius:6px;margin-top:12px;overflow:hidden}
+.metric .bar i{display:block;height:100%;background:var(--accent);border-radius:6px}
+
+/* map */
+.map-layout{display:grid;grid-template-columns:250px 1fr 300px;gap:14px;align-items:start}
+.filters label{display:block;font-size:13px;font-weight:600;margin:12px 0 5px}
+.filters label:first-child{margin-top:0}
+.filters input[type=text],.filters select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:14px}
+.filters input[type=range]{width:100%;accent-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:400!important;margin:6px 0!important;cursor:pointer}
+.chk input{accent-color:var(--accent)}
+.dot{width:11px;height:11px;border-radius:3px;display:inline-block;flex:none}
+.switch{display:flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:9px;margin-bottom:10px}
+.switch button{flex:1;border:0;background:transparent;color:var(--muted);padding:6px;border-radius:7px;font:inherit;font-size:13px;cursor:pointer}
+.switch button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow);font-weight:600}
+.map-box{padding:10px;position:relative}
+.map-box svg{width:100%;height:auto;display:block;border-radius:10px}
+.map-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:13px}
+.legend{display:flex;gap:12px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.plot{cursor:pointer;transition:opacity .2s,stroke-width .15s}
+.plot:hover{stroke-width:3}
+.plot.sel{stroke:var(--text);stroke-width:3}
+.plot.dim{opacity:.12;pointer-events:none}
+.plot-label{font-size:11px;font-weight:700;fill:#fff;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2px}
+.plot-card dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:12px 0;font-size:13.5px}
+.plot-card dt{color:var(--muted)}
+.plot-card dd{margin:0;font-weight:500}
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;color:#fff}
+.empty{color:var(--muted);text-align:center;padding:30px 8px;font-size:14px}
+
+/* roles */
+.role .ico{font-size:22px}
+.role h3{margin:8px 0 4px}
+.role p{margin:0;font-size:14px;color:var(--muted)}
+
+/* flow */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.step{padding:9px 13px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;font-weight:600;transition:all .25s;position:relative}
+.step.alt{border-style:dashed;color:var(--muted)}
+.step.bad{border-color:var(--red);color:var(--red)}
+.step.final{border-color:var(--accent);color:var(--accent)}
+.step.active{background:var(--accent);border-color:var(--accent);color:var(--accent-text);transform:translateY(-2px)}
+.step.done{background:var(--accent-2);border-color:var(--accent)}
+.arrow{color:var(--muted);font-weight:700}
+.flow-row{margin-bottom:12px}
+.flow-cap{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.sim{display:grid;grid-template-columns:1fr 360px;gap:14px;margin-top:14px}
+.log{font-size:13px;max-height:280px;overflow:auto}
+.log-item{display:grid;grid-template-columns:70px 1fr;gap:8px;padding:7px 0;border-bottom:1px dashed var(--border)}
+.log-item:last-child{border-bottom:0}
+.log-item b{display:block}
+.fr-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+
+/* scope */
+.scope ul{margin:10px 0 0;padding:0;list-style:none}
+.scope li{padding:7px 0;border-bottom:1px solid var(--border);font-size:14px;display:flex;gap:10px}
+.scope li:last-child{border:0}
+.scope .yes::before{content:"✓";color:var(--accent);font-weight:800}
+.scope .no::before{content:"→";color:var(--gray);font-weight:800}
+
+/* data options */
+.opt{position:relative}
+.opt.rec{border:2px solid var(--accent)}
+.opt .badge{position:absolute;top:-11px;right:14px;background:var(--accent);color:var(--accent-text);font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px}
+.opt h3{margin-bottom:8px}
+.pm{font-size:13.5px;margin:6px 0}
+.pm b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+
+/* roadmap */
+.timeline{display:grid;gap:0;position:relative}
+.tl-item{display:grid;grid-template-columns:44px 1fr;gap:14px;padding-bottom:14px;position:relative}
+.tl-item::before{content:"";position:absolute;left:21px;top:40px;bottom:0;width:2px;background:var(--border)}
+.tl-item:last-child::before{display:none}
+.tl-dot{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--surface);border:2px solid var(--border);color:var(--muted)}
+.tl-item.now .tl-dot{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.tl-body{padding:4px 0}
+.tl-body h3{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tl-body p{margin:4px 0 0;font-size:14px}
+.tl-check{font-size:13.5px;margin-top:6px;padding:7px 10px;background:var(--surface-2);border-radius:8px}
+
+/* risks */
+.risk-grid{display:grid;grid-template-columns:110px repeat(3,1fr);gap:8px}
+.risk-cell{min-height:110px;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.risk-axis{font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;text-align:center}
+.risk-chip{font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px;cursor:pointer}
+.risk-chip:hover{border-color:var(--accent)}
+.risk-hi{background:var(--red-2)} .risk-mid{background:var(--gold-2)} .risk-lo{background:var(--accent-2)}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th,.tbl td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tbl-wrap{overflow-x:auto}
+
+footer{padding:48px 0 100px;color:var(--muted);font-size:13px}
+
+/* chat */
+.fab{position:fixed;right:20px;bottom:20px;z-index:50;border:0;border-radius:99px;padding:14px 20px;background:var(--accent);color:var(--accent-text);font:inherit;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.2);cursor:pointer;display:flex;gap:8px;align-items:center}
+.chat{position:fixed;right:20px;bottom:20px;z-index:60;width:400px;height:min(620px,calc(100vh - 40px));background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden}
+.chat.open{display:flex}
+.chat-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.chat-head .av{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-text);display:grid;place-items:center;font-weight:800}
+.chat-head .t{flex:1;min-width:0}
+.chat-head .t b{display:block}
+.chat-head .t span{font-size:12px;color:var(--muted)}
+.chat-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.msg{max-width:88%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;word-wrap:break-word}
+.msg.bot{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;align-self:flex-start}
+.msg.me{background:var(--accent);color:var(--accent-text);border-bottom-right-radius:4px;align-self:flex-end}
+.msg .src{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.msg .src button{border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;padding:0}
+.msg h4{margin:0 0 6px;font-size:14px}
+.typing{display:flex;gap:4px;padding:14px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bl 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,100%{opacity:.25}50%{opacity:1}}
+.chips{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;border-top:1px solid var(--border);scrollbar-width:thin}
+.chip{flex:none;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:99px;padding:5px 11px;font:inherit;font-size:12.5px;cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chat-form{display:flex;gap:8px;padding:10px 12px 12px}
+.chat-form input{flex:1;min-width:0;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit}
+.chat-form input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;transition:all .25s;z-index:80;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:1000px){
+  .map-layout{grid-template-columns:1fr}
+  .sim{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .chat{right:0;bottom:0;width:100%;height:100%;border-radius:0}
+  .fab{right:16px;bottom:16px}
+  .risk-grid{grid-template-columns:70px repeat(3,minmax(0,1fr));gap:5px}
+  .risk-chip{font-size:11.5px;padding:5px}
+  .nav-links{display:none}
+  h2{font-size:22px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <div class="logo"><div class="logo-mark">Ж</div>ЖерТап</div>
+    <div class="nav-links">
+      <a href="#problem">Проблема</a>
+      <a href="#metrics">Метрики</a>
+      <a href="#map">Карта</a>
+      <a href="#roles">Роли</a>
+      <a href="#flow">Заявка</a>
+      <a href="#scope">MVP</a>
+      <a href="#data">Данные</a>
+      <a href="#roadmap">Этапы</a>
+      <a href="#risks">Риски</a>
+      <a href="#questions">Вопросы</a>
+    </div>
+    <button class="icon-btn" id="themeBtn" title="Сменить тему">◐</button>
+  </div>
+</nav>
+
+<header class="hero wrap" id="top">
+  <div class="hero-top">
+    <span class="tag">PRD v0.1 · черновик</span>
+    <span class="tag">09.10.2026</span>
+    <span class="tag" style="background:var(--gold-2);color:var(--gold)">На согласовании</span>
+    <span class="tag">🇰🇿 Республика Казахстан</span>
+  </div>
+  <h1>Единый реестр свободных земельных участков для крестьянских (фермерских) хозяйств</h1>
+  <p class="lead">Фермер видит свободные участки на карте, подаёт заявку и отслеживает её до решения. Уполномоченный орган рассматривает заявки и ведёт учёт в одном месте.</p>
+  <div class="hero-cta">
+    <a class="btn" href="#map">Открыть карту участков</a>
+    <button class="btn ghost" onclick="openChat()">💬 Спросить ассистента по PRD</button>
+  </div>
+</header>
+
+<section id="problem" class="wrap">
+  <div class="sec-head"><div class="sec-num">01 · Проблема</div><h2>Три трудности будущего фермера</h2>
+  <p class="muted">Каждая функция продукта должна решать одну из них. Если функция не решает ни одну, её убирают или откладывают.</p></div>
+  <div class="grid g3">
+    <div class="card problem"><div class="n">1</div><h3>Непрозрачность</h3><p>Неясно, какие земли сельхозназначения свободны и где они. Информация разбросана по акиматам, кадастровой карте и объявлениям о конкурсах.</p></div>
+    <div class="card problem"><div class="n">2</div><h3>Сложная процедура</h3><p>Заявитель не понимает, какие документы нужны и на каком этапе заявка. Приходится многократно посещать госорганы.</p></div>
+    <div class="card problem"><div class="n">3</div><h3>Разрозненность данных</h3><p>Отделы, комиссии и акиматы ведут учёт в разных системах. Сводной картины по району или области нет.</p></div>
+  </div>
+</section>
+
+<section id="metrics" class="wrap">
+  <div class="sec-head"><div class="sec-num">02 · Цель и метрики</div><h2>Как поймём, что продукт работает</h2>
+  <p class="muted">Целевые значения через 12 месяцев после запуска пилота.</p></div>
+  <div class="grid g3" id="metricsGrid"></div>
+  <div class="note">Значения ориентировочные — их нужно сверить с реальными «базовыми» цифрами пилотного акимата.</div>
+</section>
+
+<section id="map" class="wrap">
+  <div class="sec-head"><div class="sec-num">07.1 · Публичная карта — демо</div><h2>Карта свободных участков</h2>
+  <p class="muted">Прототип FR-1 и FR-2 на демонстрационных данных: фильтры (US-02), поиск по кадастровому номеру и селу, карточка участка. Гость видит только «свободен» и «на конкурсе» (FR-1.5).</p></div>
+  <div class="map-layout">
+    <div class="card filters">
+      <div class="switch" id="modeSwitch">
+        <button class="on" data-mode="guest">Гость</button>
+        <button data-mode="staff">Сотрудник</button>
+      </div>
+      <label for="q">Поиск</label>
+      <input type="text" id="q" placeholder="Кад. номер или село">
+      <label for="ftype">Вид угодий</label>
+      <select id="ftype"><option value="">Все</option><option>Пашня</option><option>Пастбище</option><option>Сенокос</option></select>
+      <label>Статус</label>
+      <div id="fstatus"></div>
+      <label for="farea">Площадь от: <span id="fareaV">0</span> га</label>
+      <input type="range" id="farea" min="0" max="900" step="10" value="0">
+      <label for="fdist">До села не дальше: <span id="fdistV">20</span> км</label>
+      <input type="range" id="fdist" min="1" max="20" value="20">
+      <label class="chk"><input type="checkbox" id="fwater"> Есть источник воды</label>
+      <button class="btn ghost" style="width:100%;justify-content:center;margin-top:12px" id="resetF">Сбросить фильтры</button>
+    </div>
+    <div class="card map-box">
+      <div class="map-toolbar">
+        <div class="legend" id="legend"></div>
+        <span class="muted" id="countLbl"></span>
+      </div>
+      <svg id="mapSvg" viewBox="0 0 800 500" role="img" aria-label="Карта участков пилотного района"></svg>
+    </div>
+    <div class="card plot-card" id="plotCard"><div class="empty">Нажмите на участок на карте, чтобы открыть его карточку</div></div>
+  </div>
+</section>
+
+<section id="roles" class="wrap">
+  <div class="sec-head"><div class="sec-num">03 · Пользователи и роли</div><h2>Кто работает в системе</h2>
+  <p class="muted">Роли определяют права доступа. Цепочку согласования (отдел → комиссия → аким) нужно сверить с регламентом пилотного акимата.</p></div>
+  <div class="grid g4" id="rolesGrid"></div>
+</section>
+
+<section id="flow" class="wrap">
+  <div class="sec-head"><div class="sec-num">07.5 · Статусная модель заявки</div><h2>Путь заявки — от черновика до договора</h2>
+  <p class="muted">Ключевой элемент «полного цикла». Каждый переход фиксируется: кто, когда, комментарий (FR-5.1). Отказ — только с обоснованием (FR-5.2).</p></div>
+  <div class="card">
+    <div class="flow-row"><div class="flow-cap">Основной путь</div><div class="flow" id="flowMain"></div></div>
+    <div class="flow-row"><div class="flow-cap">Доработка</div><div class="flow" id="flowRework"></div></div>
+    <div class="flow-row" style="margin-bottom:0"><div class="flow-cap">Альтернативные финалы</div><div class="flow" id="flowAlt"></div></div>
+  </div>
+  <div class="sim">
+    <div class="card">
+      <h3>Симуляция заявки</h3>
+      <p class="muted small" style="margin:4px 0 12px">Пошаговое прохождение заявки на участок P-001 с возвратом на доработку.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="simNext">▶ Следующий шаг</button>
+        <button class="btn ghost" id="simAuto">Автоматически</button>
+        <button class="btn ghost" id="simReset">Сначала</button>
+      </div>
+      <div id="simInfo" style="margin-top:14px;font-size:14px"></div>
+    </div>
+    <div class="card">
+      <h3>История статусов (StatusHistory)</h3>
+      <div class="log" id="simLog"><div class="empty">История пуста</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="scope" class="wrap">
+  <div class="sec-head"><div class="sec-num">05 · Объём продукта</div><h2>Что входит в MVP</h2>
+  <p class="muted">Пилот — один район. В MVP оставлено то, без чего цикл не замкнётся; «улучшения» — в следующих версиях.</p></div>
+  <div class="grid g3 scope">
+    <div class="card"><h3>✅ Входит в MVP</h3><ul id="scopeIn"></ul></div>
+    <div class="card"><h3>⏭ Следующие версии</h3><ul id="scopeOut"></ul>
+      <h3 style="margin-top:22px">Нефункциональные требования</h3><ul id="nfrList"></ul></div>
+  </div>
+</section>
+
+<section id="data" class="wrap">
+  <div class="sec-head"><div class="sec-num">09 · Источники данных — открытый вопрос</div><h2>Откуда брать данные об участках</h2>
+  <p class="muted">Рекомендация: MVP на варианте А, архитектура сразу под вариант В (модуль синхронизации, поле «источник данных» у каждого участка).</p></div>
+  <div class="grid g3" id="dataOpts"></div>
+</section>
+
+<section id="roadmap" class="wrap">
+  <div class="sec-head"><div class="sec-num">14 · План этапов</div><h2>Этапы и контрольные точки</h2>
+  <p class="muted">Не переходите к следующему этапу, пока не выполнена контрольная точка текущего.</p></div>
+  <div class="card"><div class="timeline" id="timeline"></div></div>
+</section>
+
+<section id="risks" class="wrap">
+  <div class="sec-head"><div class="sec-num">12 · Риски</div><h2>Матрица рисков</h2>
+  <p class="muted">Нажмите на риск, чтобы увидеть меру снижения.</p></div>
+  <div class="card">
+    <div class="risk-grid" id="riskGrid"></div>
+    <div id="riskInfo" class="note" style="display:none"></div>
+  </div>
+</section>
+
+<section id="questions" class="wrap">
+  <div class="sec-head"><div class="sec-num">15 · Решения и открытые вопросы</div><h2>Что решено и что нужно выяснить</h2></div>
+  <div class="grid g3">
+    <div class="card"><h3>Лог решений</h3><div class="tbl-wrap"><table class="tbl" id="decTbl"></table></div></div>
+    <div class="card"><h3>Открытые вопросы</h3><div class="tbl-wrap"><table class="tbl" id="qTbl"></table></div></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Критерии приёмки MVP (раздел 13)</h3>
+    <ol style="margin:10px 0 0;padding-left:20px;font-size:14px" id="accList"></ol>
+  </div>
+</section>
+
+<footer class="wrap">ЖерТап — визуализация PRD v0.1 от 09.10.2026. Данные на карте демонстрационные. Правовые ссылки требуют проверки юристом.</footer>
+
+<button class="fab" id="fab" onclick="openChat()">💬 Ассистент по PRD</button>
+
+<div class="chat" id="chat" role="dialog" aria-label="Чат-ассистент">
+  <div class="chat-head">
+    <div class="av">Ж</div>
+    <div class="t"><b>Ассистент ЖерТап</b><span>Отвечает по содержанию PRD · работает офлайн</span></div>
+    <button class="icon-btn" title="Очистить чат" onclick="clearChat()">⟲</button>
+    <button class="icon-btn" title="Закрыть" onclick="closeChat()">✕</button>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chips" id="chips"></div>
+  <form class="chat-form" id="chatForm">
+    <input id="chatInput" autocomplete="off" placeholder="Задайте вопрос о проекте…">
+    <button class="btn" type="submit" id="sendBtn">➤</button>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2800)}
+function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+function goTo(id){const el=document.getElementById(id);if(!el)return;el.scrollIntoView({behavior:'smooth'});const c=el.querySelector('.card')||el;c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash');if(window.innerWidth<640)closeChat()}
+
+/* ---------- theme ---------- */
+(function(){const t=store('jt-theme');if(t)document.documentElement.dataset.theme=t})();
+$('#themeBtn').onclick=()=>{
+  const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  const next=cur==='dark'?'light':'dark';document.documentElement.dataset.theme=next;store('jt-theme',next);
+};
+
+/* ---------- metrics ---------- */
+const METRICS=[
+  ['≥ 90%','Свободных участков пилотного района внесено в реестр',90],
+  ['−30%','Среднее время от подачи заявки до решения',30],
+  ['≥ 60%','Доля заявок, поданных онлайн',60],
+  ['≤ 1','Очный визит заявителя на одну заявку',100],
+  ['≤ 3 дня','Задержка обновления статуса участка',75],
+  ['≥ 4,0','Удовлетворённость пользователей (из 5)',80],
+];
+$('#metricsGrid').innerHTML=METRICS.map(m=>`<div class="card metric"><div class="val">${m[0]}</div><div class="lbl">${m[1]}</div><div class="bar"><i style="width:${m[2]}%"></i></div></div>`).join('');
+
+/* ---------- map ---------- */
+const STATUS={
+  free:{name:'Свободен',color:'var(--st-free)',pub:true},
+  contest:{name:'На конкурсе',color:'var(--st-contest)',pub:true},
+  claimed:{name:'Заявлен',color:'var(--st-claimed)',pub:false},
+  granted:{name:'Предоставлен',color:'var(--st-granted)',pub:false},
+};
+const PLOTS=[
+  {id:'P-001',cad:'03-045-112-301',st:'free',type:'Пашня',area:120,village:'Акжар',okrug:'Акжарский с/о',water:'Река Талды',dist:4,road:1.2,bon:62,pts:'250,110 320,100 330,160 260,170'},
+  {id:'P-002',cad:'03-045-112-302',st:'free',type:'Пастбище',area:450,village:'Акжар',okrug:'Акжарский с/о',water:'',dist:12,road:5,bon:28,pts:'90,250 180,230 200,320 110,340'},
+  {id:'P-003',cad:'03-045-118-044',st:'contest',type:'Сенокос',area:80,village:'Талды',okrug:'Талдинский с/о',water:'Река Талды',dist:6,road:2.5,bon:45,pts:'400,180 470,170 480,230 410,240'},
+  {id:'P-004',cad:'03-045-118-051',st:'claimed',type:'Пашня',area:200,village:'Талды',okrug:'Талдинский с/о',water:'Скважина',dist:5,road:0.8,bon:58,pts:'340,240 400,250 390,310 330,300'},
+  {id:'P-005',cad:'03-045-120-007',st:'granted',type:'Пастбище',area:600,village:'Талды',okrug:'Талдинский с/о',water:'',dist:14,road:6,bon:25,pts:'560,60 680,90 690,170 580,160'},
+  {id:'P-006',cad:'03-045-120-019',st:'free',type:'Сенокос',area:65,village:'Талды',okrug:'Талдинский с/о',water:'Родник',dist:7,road:3,bon:40,pts:'600,220 660,215 665,265 605,270'},
+  {id:'P-007',cad:'03-045-124-210',st:'contest',type:'Пашня',area:310,village:'Кенсай',okrug:'Кенсайский с/о',water:'Канал',dist:3,road:0.5,bon:66,pts:'470,280 560,270 570,340 480,350'},
+  {id:'P-008',cad:'',st:'free',type:'Пастбище',area:900,village:'Кенсай',okrug:'Кенсайский с/о',water:'',dist:18,road:9,bon:20,pts:'620,300 730,290 700,420 610,400'},
+  {id:'P-009',cad:'03-045-112-288',st:'granted',type:'Пашня',area:150,village:'Акжар',okrug:'Акжарский с/о',water:'Река Талды',dist:5,road:1,bon:60,pts:'150,120 220,100 230,160 160,180'},
+  {id:'P-010',cad:'03-045-124-233',st:'free',type:'Пашня',area:45,village:'Кенсай',okrug:'Кенсайский с/о',water:'Скважина',dist:2,road:0.3,bon:55,pts:'280,350 330,345 335,390 285,395'},
+  {id:'P-011',cad:'03-045-124-240',st:'claimed',type:'Сенокос',area:95,village:'Кенсай',okrug:'Кенсайский с/о',water:'Канал',dist:4,road:1.5,bon:42,pts:'210,360 260,350 265,410 215,415'},
+  {id:'P-012',cad:'03-045-112-330',st:'free',type:'Пастбище',area:280,village:'Акжар',okrug:'Акжарский с/о',water:'Родник',dist:9,road:4,bon:30,pts:'360,90 440,80 450,140 370,150'},
+];
+let mapMode='guest', selPlot=null;
+const fState={};
+function centroid(pts){const a=pts.split(' ').map(p=>p.split(',').map(Number));return [a.reduce((s,p)=>s+p[0],0)/a.length,a.reduce((s,p)=>s+p[1],0)/a.length]}
+function drawMap(){
+  const svg=$('#mapSvg');
+  let h=`<defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="var(--border)" stroke-width=".6"/></pattern></defs>
+  <rect width="800" height="500" fill="var(--surface-2)"/>
+  <path d="M60,80 L220,40 L420,60 L600,30 L750,110 L760,280 L700,440 L480,470 L260,450 L90,400 L40,240 Z" fill="var(--map-bg)" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <path d="M60,80 L220,40 L420,60 L600,30 L750,110 L760,280 L700,440 L480,470 L260,450 L90,400 L40,240 Z" fill="url(#grid)"/>
+  <path d="M100,60 C200,160 300,120 380,220 S560,330 760,300" fill="none" stroke="var(--map-river)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M40,300 L230,200 L520,180 L760,200" fill="none" stroke="var(--map-road)" stroke-width="4"/>
+  <path d="M230,200 L420,370 L480,470" fill="none" stroke="var(--map-road)" stroke-width="3"/>`;
+  PLOTS.forEach(p=>{
+    const [cx,cy]=centroid(p.pts);
+    h+=`<polygon class="plot" data-id="${p.id}" points="${p.pts}" fill="${STATUS[p.st].color}" fill-opacity=".78" stroke="${STATUS[p.st].color}" stroke-width="1.5"><title>${p.id} · ${p.type} · ${p.area} га</title></polygon>
+        <text class="plot-label" data-lbl="${p.id}" x="${cx}" y="${cy+4}" text-anchor="middle">${p.id.slice(2)}</text>`;
+  });
+  [['Акжар',230,200],['Талды',520,180],['Кенсай',420,370]].forEach(([n,x,y])=>{
+    h+=`<circle cx="${x}" cy="${y}" r="6" fill="var(--text)" stroke="var(--surface)" stroke-width="2"/><text x="${x+10}" y="${y-8}" font-size="13" font-weight="700" fill="var(--text)" style="paint-order:stroke;stroke:var(--map-bg);stroke-width:3px">с. ${n}</text>`;
+  });
+  h+=`<text x="770" y="485" text-anchor="end" font-size="11" fill="var(--muted)">Демо-район · условный масштаб</text>`;
+  svg.innerHTML=h;
+  svg.querySelectorAll('.plot').forEach(el=>el.addEventListener('click',()=>selectPlot(el.dataset.id)));
+}
+function buildFilters(){
+  $('#fstatus').innerHTML=Object.entries(STATUS).map(([k,s])=>`<label class="chk" data-st="${k}"><input type="checkbox" value="${k}" checked> <span class="dot" style="background:${s.color}"></span>${s.name}</label>`).join('');
+  $('#legend').innerHTML=Object.values(STATUS).map(s=>`<span><span class="dot" style="background:${s.color}"></span>${s.name}</span>`).join('');
+  ['#q','#ftype','#farea','#fdist','#fwater'].forEach(s=>$(s).addEventListener('input',applyFilters));
+  $('#fstatus').addEventListener('change',applyFilters);
+  $('#resetF').onclick=()=>{$('#q').value='';$('#ftype').value='';$('#farea').value=0;$('#fdist').value=20;$('#fwater').checked=false;$('#fstatus').querySelectorAll('input').forEach(i=>i.checked=true);applyFilters()};
+  $('#modeSwitch').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    mapMode=b.dataset.mode;$('#modeSwitch').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    toast(mapMode==='guest'?'Режим гостя: видны только «свободен» и «на конкурсе» (FR-1.5)':'Режим сотрудника: видны все статусы участков');
+    applyFilters();
+  });
+}
+function plotVisible(p){
+  const q=$('#q').value.trim().toLowerCase();
+  const sts=[...$('#fstatus').querySelectorAll('input:checked')].map(i=>i.value);
+  if(mapMode==='guest'&&!STATUS[p.st].pub)return false;
+  if(!sts.includes(p.st))return false;
+  if($('#ftype').value&&p.type!==$('#ftype').value)return false;
+  if(p.area<+$('#farea').value)return false;
+  if(p.dist>+$('#fdist').value)return false;
+  if($('#fwater').checked&&!p.water)return false;
+  if(q&&!(p.cad.includes(q)||p.village.toLowerCase().includes(q)||p.id.toLowerCase().includes(q)))return false;
+  return true;
+}
+function applyFilters(){
+  $('#fareaV').textContent=$('#farea').value;$('#fdistV').textContent=$('#fdist').value;
+  $('#fstatus').querySelectorAll('[data-st]').forEach(l=>l.style.display=(mapMode==='guest'&&!STATUS[l.dataset.st].pub)?'none':'');
+  let n=0;
+  PLOTS.forEach(p=>{const v=plotVisible(p);if(v)n++;
+    document.querySelector(`[data-id="${p.id}"]`).classList.toggle('dim',!v);
+    document.querySelector(`[data-lbl="${p.id}"]`).style.opacity=v?1:.15;});
+  $('#countLbl').textContent=`Найдено: ${n} из ${PLOTS.length}`;
+  if(selPlot&&!plotVisible(PLOTS.find(p=>p.id===selPlot)))selectPlot(null);
+}
+function selectPlot(id){
+  selPlot=id;
+  document.querySelectorAll('.plot').forEach(el=>el.classList.toggle('sel',el.dataset.id===id));
+  const p=PLOTS.find(x=>x.id===id);
+  if(!p){$('#plotCard').innerHTML='<div class="empty">Нажмите на участок на карте, чтобы открыть его карточку</div>';return}
+  const s=STATUS[p.st];
+  $('#plotCard').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Участок ${p.id}</h3><span class="status-pill" style="background:${s.color}">${s.name}</span></div>
+    <dl>
+      <dt>Кад. номер</dt><dd>${p.cad||'<span class="muted">не присвоен</span>'}</dd>
+      <dt>Площадь</dt><dd>${p.area} га</dd>
+      <dt>Адм. единица</dt><dd>Демо-район, ${p.okrug}</dd>
+      <dt>Назначение</dt><dd>Ведение КХ</dd>
+      <dt>Вид угодий</dt><dd>${p.type}</dd>
+      <dt>Бонитет почв</dt><dd>${p.bon} баллов</dd>
+      <dt>Вода</dt><dd>${p.water||'<span class="muted">нет</span>'}</dd>
+      <dt>До села</dt><dd>${p.dist} км (с. ${p.village})</dd>
+      <dt>До дороги</dt><dd>${p.road} км</dd>
+      <dt>Обременения</dt><dd>Нет</dd>
+      <dt>Обновлено</dt><dd>02.10.2026</dd>
+      <dt>Орган</dt><dd>Отдел земельных отношений</dd>
+    </dl>
+    <button class="btn" style="width:100%;justify-content:center" ${s.pub?'':'disabled'} onclick="toast('Для подачи заявки нужен вход через ЭЦП или eGov (FR-2.3)')">Подать заявку</button>
+    <p class="muted small" style="margin:8px 0 0">Поля по FR-2.1 / FR-2.2. Данные демонстрационные.</p>`;
+}
+drawMap();buildFilters();applyFilters();
+
+/* ---------- roles ---------- */
+const ROLES=[
+  ['👀','Гость','Любой посетитель без входа','Смотрит карту свободных участков, читает инструкции'],
+  ['🧑‍🌾','Заявитель','Физлицо, ИП или действующее КХ','Подаёт заявки, загружает документы, видит статус, получает уведомления'],
+  ['🗂️','Специалист ОЗО','Сотрудник акимата района/города','Вносит и редактирует участки, проверяет заявки, запрашивает доработку'],
+  ['⚖️','Земельная комиссия','Секретарь / члены комиссии','Видит заявки на рассмотрение, фиксирует решение комиссии'],
+  ['✍️','Руководитель акимата','Аким района или заместитель','Утверждает итоговое решение, подписывает ЭЦП'],
+  ['📊','Наблюдатель','Область / министерство','Видит сводную аналитику только для чтения'],
+  ['🛠️','Администратор','Технический оператор','Управляет пользователями, справочниками, ролями, видит аудит'],
+];
+$('#rolesGrid').innerHTML=ROLES.map(r=>`<div class="card role"><div class="ico">${r[0]}</div><h3>${r[1]}</h3><p class="small" style="margin-bottom:6px"><b>${r[2]}</b></p><p>${r[3]}</p></div>`).join('');
+
+/* ---------- status flow ---------- */
+const MAIN=['Черновик','Подана','На проверке комплектности','Принята к рассмотрению','На рассмотрении комиссии','Решение комиссии','Утверждено органом','Договор заключён'];
+const flowHtml=(arr,cls='')=>arr.map((s,i)=>`<span class="step ${typeof cls==='function'?cls(s,i):cls}" data-step="${esc(s)}">${s}</span>${i<arr.length-1?'<span class="arrow">→</span>':''}`).join('');
+$('#flowMain').innerHTML=flowHtml(MAIN,(s,i)=>i===MAIN.length-1?'final':'');
+$('#flowRework').innerHTML=`<span class="step" data-step="На проверке комплектности·r">На проверке комплектности</span><span class="arrow">→</span><span class="step alt" data-step="Возвращена на доработку">Возвращена на доработку</span><span class="arrow">→</span><span class="step alt" data-step="Подана повторно">Подана повторно</span><span class="arrow">↺</span>`;
+$('#flowAlt').innerHTML=`<span class="step bad">Решение комиссии: отказано</span><span class="step bad">Отказано органом</span><span class="step" style="color:var(--muted)">Отозвана заявителем</span>`;
+
+const SIM=[
+  {st:'Черновик',who:'Заявитель',c:'Черновик сохраняется автоматически (FR-4.4)',fr:['FR-4.1','FR-4.4']},
+  {st:'Подана',who:'Заявитель',c:'Подписано ЭЦП, присвоен номер ЖТ-2026-000417 (FR-4.5)',fr:['FR-4.5','FR-3.1']},
+  {st:'На проверке комплектности',who:'Специалист ОЗО',c:'Проверка перечня документов из справочника (FR-4.2)',fr:['FR-6.1','FR-4.2']},
+  {st:'Возвращена на доработку',who:'Специалист ОЗО',c:'Не приложен бизнес-план. Заявитель получил уведомление (US-07)',fr:['FR-7.2']},
+  {st:'Подана повторно',who:'Заявитель',c:'Документ дозагружен без подачи новой заявки',fr:['US-07']},
+  {st:'Принята к рассмотрению',who:'Специалист ОЗО',c:'Комплект полный, заявка включена в повестку',fr:['FR-5.3']},
+  {st:'На рассмотрении комиссии',who:'Секретарь комиссии',c:'Сформирована повестка заседания (FR-6.3)',fr:['FR-6.3','US-12']},
+  {st:'Решение комиссии',who:'Земельная комиссия',c:'Рекомендовано к предоставлению. Протокол по шаблону',fr:['US-12']},
+  {st:'Утверждено органом',who:'Аким района',c:'Решение подписано ЭЦП (FR-6.4). Участок → «предоставлен» (US-14)',fr:['FR-6.4','US-13','US-14']},
+  {st:'Договор заключён',who:'Система',c:'Финал. Заявитель может скачать решение (US-08)',fr:['US-08']},
+];
+let simI=-1, simTimer=null;
+function simRender(){
+  document.querySelectorAll('#flow .step').forEach(e=>e.classList.remove('active','done'));
+  const passed=SIM.slice(0,simI+1).map(s=>s.st);
+  passed.forEach((st,i)=>{
+    let el=document.querySelector(`#flow [data-step="${st}"]`);
+    if(st==='На проверке комплектности'&&simI>=3&&simI<=4)el=document.querySelector('#flow [data-step="На проверке комплектности·r"]');
+    if(el)el.classList.add(i===simI?'active':'done');
+  });
+  if(simI<0){$('#simInfo').innerHTML='<span class="muted">Нажмите «Следующий шаг», чтобы начать.</span>';$('#simLog').innerHTML='<div class="empty">История пуста</div>';$('#simNext').disabled=false;return}
+  const s=SIM[simI];
+  $('#simInfo').innerHTML=`<b>Шаг ${simI+1} из ${SIM.length}: ${s.st}</b><br><span class="muted">${s.c}</span><div class="fr-list">${s.fr.map(f=>`<span class="tag">${f}</span>`).join('')}</div>`;
+  const base=new Date(2026,9,1,9,0);
+  $('#simLog').innerHTML=SIM.slice(0,simI+1).map((x,i)=>{const d=new Date(base.getTime()+i*86400000*1.6);return `<div class="log-item"><span class="muted">${d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})}</span><div><b>${x.st}</b>${x.who} — ${x.c}</div></div>`}).reverse().join('');
+  $('#simNext').disabled=simI>=SIM.length-1;
+}
+$('#simNext').onclick=()=>{if(simI<SIM.length-1){simI++;simRender()}};
+$('#simReset').onclick=()=>{clearInterval(simTimer);simTimer=null;$('#simAuto').textContent='Автоматически';simI=-1;simRender()};
+$('#simAuto').onclick=()=>{
+  if(simTimer){clearInterval(simTimer);simTimer=null;$('#simAuto').textContent='Автоматически';return}
+  if(simI>=SIM.length-1)simI=-1;
+  $('#simAuto').textContent='⏸ Пауза';
+  simTimer=setInterval(()=>{simI++;simRender();if(simI>=SIM.length-1){clearInterval(simTimer);simTimer=null;$('#simAuto').textContent='Автоматически'}},1100);
+};
+simRender();
+
+/* ---------- scope ---------- */
+const IN=['Публичная карта свободных участков с фильтрами','Карточка участка','Регистрация и вход заявителя (ЭЦП / eGov)','Подача заявки с загрузкой документов','Личный кабинет заявителя со статусом и историей','Кабинет специалиста: участки и заявки','Фиксация решения комиссии и итогового решения','Уведомления (email, SMS, в кабинете)','Журнал аудита всех действий','Двуязычный интерфейс (каз/рус)'];
+const OUT=['Автоматическая интеграция с земельным кадастром','Электронные торги/аукционы','Мобильное приложение (в MVP — адаптивный веб)','Аналитика урожайности, почв, спутниковый мониторинг','Онлайн-оплата сборов'];
+const NFR=['Карта ≤ 3 сек на 4G, ≥ 10 000 участков в районе','Доступность 99,5% в месяц','HTTPS TLS 1.2+, шифрование ПД, OWASP Top-10','Серверы и бэкапы — на территории РК','Бэкап ежедневно, восстановление ≤ 4 ч','WCAG 2.1 AA, облегчённый режим для слабого интернета'];
+$('#scopeIn').innerHTML=IN.map(x=>`<li class="yes">${x}</li>`).join('');
+$('#scopeOut').innerHTML=OUT.map(x=>`<li class="no">${x}</li>`).join('');
+$('#nfrList').innerHTML=NFR.map(x=>`<li class="yes">${x}</li>`).join('');
+
+/* ---------- data options ---------- */
+const OPTS=[
+  {k:'А',t:'Ручной ввод + импорт файлов',p:'Быстрый старт, не нужны межведомственные согласования',m:'Риск устаревания данных, нагрузка на сотрудников',w:'Пилот, MVP',rec:'Для MVP'},
+  {k:'Б',t:'Интеграция с земельным кадастром (ШЭП)',p:'Данные официальные и актуальные',m:'Долгие согласования, нужен статус госсистемы и аттестация ИБ',w:'Масштабирование на всю страну'},
+  {k:'В',t:'Комбинированный',p:'Официальная геометрия из кадастра + характеристики от сотрудников',m:'Нужна логика синхронизации и разрешения конфликтов',w:'Целевая архитектура',rec:'Цель'},
+];
+$('#dataOpts').innerHTML=OPTS.map(o=>`<div class="card opt ${o.rec?'rec':''}">${o.rec?`<span class="badge">${o.rec}</span>`:''}<h3>Вариант ${o.k}. ${o.t}</h3>
+  <div class="pm"><b style="color:var(--accent)">Плюсы</b>${o.p}</div><div class="pm"><b style="color:var(--red)">Минусы</b>${o.m}</div><div class="pm"><b class="muted">Когда подходит</b>${o.w}</div></div>`).join('');
+
+/* ---------- roadmap ---------- */
+const STAGES=[
+  ['Подготовка PRD','Этот документ','Документ согласован заказчиком','1–2 нед.'],
+  ['Исследование','Интервью с 5–10 фермерами и 2–3 сотрудниками акимата; карта процесса','Подтверждена статусная модель; выбран пилотный район','2–3 нед.'],
+  ['Правовая экспертиза и данные','Заключение юриста; решение по разделу 9','Закрыты открытые вопросы раздела 9','2–4 нед.'],
+  ['Дизайн','Прототип (Figma) основных экранов','Прототип протестирован на 5 пользователях','3–4 нед.'],
+  ['Разработка MVP','Работающая система','Все FR раздела 7 реализованы','3–4 мес.'],
+  ['Тестирование и ИБ','Отчёты о тестах','Критерии раздела 13 выполнены','3–4 нед.'],
+  ['Пилот','Запуск в 1 районе','Метрики раздела 2 собираются','3–6 мес.'],
+  ['Масштабирование','Решение о расширении','Анализ итогов пилота','—'],
+];
+$('#timeline').innerHTML=STAGES.map((s,i)=>`<div class="tl-item ${i===0?'now':''}"><div class="tl-dot">${i}</div><div class="tl-body"><h3>${s[0]} <span class="tag">${s[3]}</span>${i===0?'<span class="tag" style="background:var(--accent-2);color:var(--accent)">текущий</span>':''}</h3><p class="muted">${s[1]}</p><div class="tl-check">🏁 ${s[2]}</div></div></div>`).join('');
+
+/* ---------- risks ---------- */
+const RISKS=[
+  {t:'Нет доступа к кадастровым данным',p:2,i:1,m:'Старт на ручном вводе (раздел 9)'},
+  {t:'Процедура не совпадает с законом',p:1,i:1,m:'Юридическая экспертиза до разработки статусной модели'},
+  {t:'Сотрудники не используют систему',p:1,i:1,m:'Обучение, простой интерфейс, поддержка «за руку» на пилоте'},
+  {t:'Данные устаревают',p:2,i:0,m:'Показ даты обновления, напоминания сотрудникам'},
+  {t:'Утечка персональных данных',p:0,i:1,m:'Шифрование, аудит, аттестация ИБ'},
+  {t:'Изменение законодательства',p:1,i:0,m:'Настраиваемые справочники документов и статусов'},
+];
+(function(){
+  const P=['Низкая','Средняя','Высокая'],I=['Среднее','Высокое'];
+  let h='<div></div>'+P.map(p=>`<div class="risk-axis">Вероятность:<br>${p}</div>`).join('');
+  [1,0].forEach(ii=>{
+    h+=`<div class="risk-axis">Влияние:<br>${I[ii]}</div>`;
+    [0,1,2].forEach(pp=>{
+      const lvl=pp+ii>=2?'risk-hi':pp+ii===1?'risk-mid':'risk-lo';
+      h+=`<div class="risk-cell ${lvl}">${RISKS.map((r,k)=>r.p===pp&&r.i===ii?`<div class="risk-chip" data-r="${k}">${r.t}</div>`:'').join('')}</div>`;
+    });
+  });
+  $('#riskGrid').innerHTML=h;
+  $('#riskGrid').addEventListener('click',e=>{const c=e.target.closest('.risk-chip');if(!c)return;const r=RISKS[c.dataset.r];
+    const el=$('#riskInfo');el.style.display='block';el.innerHTML=`<b>${r.t}</b><br>Как снижаем: ${r.m}`});
+})();
+
+/* ---------- decisions / questions ---------- */
+const DEC=[['D-01','Страна — Республика Казахстан','Принято'],['D-02','Полный цикл заявки','Принято'],['D-03','MVP на ручном вводе + импорт, архитектура под интеграцию','Ждёт подтверждения'],['D-04','Вход через ЭЦП / eGov','Ждёт подтверждения']];
+const QS=[['Q-01','Продукт государственный или частный?','Заказчик','До этапа 2'],['Q-02','Какой район будет пилотным?','Заказчик / акимат','До этапа 1'],['Q-03','Есть ли цифровые границы участков у акимата и в каком формате?','Акимат','До этапа 2'],['Q-04','Порядок доступа к данным кадастра','Владелец кадастра','До этапа 2'],['Q-05','Актуальный регламент и сроки рассмотрения заявок КХ','Юрист / акимат','До этапа 2']];
+$('#decTbl').innerHTML='<tr><th>№</th><th>Решение</th><th>Статус</th></tr>'+DEC.map(d=>`<tr><td><b>${d[0]}</b></td><td>${d[1]}</td><td><span class="tag" style="${d[2]==='Принято'?'background:var(--accent-2);color:var(--accent)':'background:var(--gold-2);color:var(--gold)'}">${d[2]}</span></td></tr>`).join('');
+$('#qTbl').innerHTML='<tr><th>№</th><th>Вопрос</th><th>Кому / срок</th></tr>'+QS.map(q=>`<tr><td><b>${q[0]}</b></td><td>${q[1]}</td><td class="small">${q[2]}<br><span class="muted">${q[3]}</span></td></tr>`).join('');
+const ACC=['В пилотном районе в реестр внесено ≥ 90% свободных участков','Путь «найти участок → подать заявку → получить решение» полностью онлайн (кроме обязательных очных действий)','Все переходы статусов отражены в истории и журнале аудита','Все user stories US-01…US-15 покрыты тестами и приняты заказчиком','Пройдено нагрузочное тестирование по разделу 8','Интерфейс полностью доступен на казахском и русском'];
+$('#accList').innerHTML=ACC.map(a=>`<li style="margin:5px 0">${a}</li>`).join('');
+
+/* =====================================================================
+   ЧАТ-АССИСТЕНТ: поиск ответа по базе знаний, собранной из PRD
+   ===================================================================== */
+const KB=[
+ {t:'О документе',a:'top',k:'жертап название версия дата статус документ prd что это проект продукт',
+  x:'**ЖерТап** (рабочее название) — единый реестр свободных земельных участков для крестьянских (фермерских) хозяйств в Республике Казахстан.\n• Версия PRD: 0.1 (черновик)\n• Дата: 09.10.2026\n• Статус: на согласовании'},
+ {t:'Проблема',a:'problem',k:'проблема зачем почему боль трудность непрозрачность процедура разрозненность',
+  x:'Продукт решает три проблемы:\n• **Непрозрачность** — неясно, какие земли свободны и где они; информация разбросана по акиматам, кадастровой карте и объявлениям.\n• **Сложная процедура** — непонятно, какие документы нужны и на каком этапе заявка; приходится многократно ходить в госорганы.\n• **Разрозненность данных** — органы ведут учёт в разных системах, сводной картины по району/области нет.'},
+ {t:'Цель продукта',a:'metrics',k:'цель задача назначение реестр',
+  x:'Цель — единый цифровой реестр: фермер видит свободные участки на карте, подаёт заявку и отслеживает её до решения, а уполномоченный орган рассматривает заявки и ведёт учёт в одном месте.'},
+ {t:'Метрики успеха',a:'metrics',k:'метрика kpi показатель успех измерить оценить результат цифры целевые',
+  x:'Целевые значения через 12 мес. после запуска пилота:\n• ≥ 90% свободных участков пилотного района в реестре\n• −30% времени от подачи заявки до решения\n• ≥ 60% заявок подаются онлайн\n• ≤ 1 очного визита на заявку\n• ≤ 3 рабочих дней задержки обновления статуса участка\n• Удовлетворённость ≥ 4,0 из 5\nЗначения нужно сверить с базовыми цифрами пилотного акимата.'},
+ {t:'Пользователи и роли',a:'roles',k:'роль пользователь кто доступ права гость заявитель специалист комиссия секретарь аким руководитель наблюдатель администратор',
+  x:'Роли в системе:\n• **Гость** — смотрит карту и инструкции\n• **Заявитель** (ФЛ, ИП, КХ) — подаёт заявки, загружает документы, видит статус\n• **Специалист отдела земельных отношений** — ведёт участки, проверяет заявки\n• **Секретарь / член земельной комиссии** — фиксирует решение комиссии\n• **Руководитель акимата** — утверждает решение, подписывает ЭЦП\n• **Наблюдатель** (область/министерство) — аналитика только для чтения\n• **Администратор** — пользователи, справочники, роли, аудит'},
+ {t:'Правовые рамки',a:'questions',k:'закон право правовой юрист кодекс земельный персональные данные информатизация язык эцп законодательство юридический',
+  x:'Нужно учитывать (требует проверки юристом):\n• Земельный кодекс РК — порядок предоставления земель для КХ, конкурс/торги\n• Законодательство о КХ и Предпринимательский кодекс\n• Закон «О персональных данных и их защите» — хранение ПД в РК, согласие\n• Закон «Об информатизации» — аттестация ИБ, интеграция через ШЭП\n• Закон «О языках» — интерфейс на казахском и русском\n• Закон «Об электронном документе и ЭЦП»\nСистема не подменяет процедуру: решение остаётся за уполномоченным органом.'},
+ {t:'Что входит в MVP',a:'scope',k:'mvp пилот входит объём scope функции первая версия минимальный',
+  x:'MVP (пилот в 1 районе):\n• Публичная карта с фильтрами и карточка участка\n• Вход через ЭЦП / eGov\n• Подача заявки с документами, личный кабинет со статусом\n• Кабинет специалиста: участки и заявки\n• Решение комиссии и итоговое решение\n• Уведомления (email, SMS, в кабинете)\n• Журнал аудита\n• Казахский и русский языки'},
+ {t:'Что не входит в MVP',a:'scope',k:'не входит следующие версии потом позже отложено мобильное приложение торги аукцион оплата спутник урожайность',
+  x:'Вынесено в следующие версии:\n• Автоматическая интеграция с госкадастром\n• Электронные торги/аукционы\n• Мобильное приложение (в MVP — адаптивный веб)\n• Аналитика урожайности и почв, спутниковый мониторинг\n• Онлайн-оплата сборов'},
+ {t:'User stories заявителя',a:'map',k:'user story история пользователь сценарий заявитель гость us-01 us-08 фермер хочет',
+  x:'Сценарии заявителя:\n• US-01 видеть свободные участки района на карте\n• US-02 фильтровать по площади, назначению, угодьям, воде, удалённости\n• US-03 войти через ЭЦП или eGov\n• US-04 подать заявку с документами\n• US-05 видеть статус и срок\n• US-06 получать уведомления о смене статуса\n• US-07 исправить заявку по запросу доработки без новой подачи\n• US-08 скачать итоговое решение'},
+ {t:'User stories органа',a:'roles',k:'user story сценарий орган специалист комиссия руководитель наблюдатель us-09 us-15 импорт',
+  x:'Сценарии уполномоченного органа:\n• US-09 добавить и опубликовать участок\n• US-10 массово загрузить участки (GeoJSON, Shapefile, KML, Excel)\n• US-11 очередь заявок и проверка комплектности\n• US-12 повестка комиссии и решения\n• US-13 утвердить решение и подписать ЭЦП\n• US-14 автоматическая смена статуса участка\n• US-15 сводка по районам для наблюдателя области'},
+ {t:'Публичная карта (FR-1)',a:'map',k:'карта подложка спутник слой цвет фильтр поиск кластер публично fr-1 метка',
+  x:'Требования к карте:\n• FR-1.1 подложка «спутник» и «схема», переключатель слоёв\n• FR-1.2 цвет статуса: свободен, на конкурсе, заявлен, предоставлен\n• FR-1.3 фильтры и поиск по кадастровому номеру и населённому пункту\n• FR-1.4 кластеризация меток при отдалении\n• FR-1.5 публично видны только «свободен» и «на конкурсе», без персональных данных\nДемо карты есть на этой странице.'},
+ {t:'Карточка участка (FR-2)',a:'map',k:'карточка участок поля площадь кадастровый номер бонитет вода дорога обременение аренда фото fr-2',
+  x:'Карточка участка содержит (FR-2.1): кадастровый номер, площадь (га), область/район/сельский округ, целевое назначение, вид угодий, бонитет почв, источник воды, расстояние до дорог и села, ограничения и обременения, срок аренды, фото.\n• FR-2.2 дата обновления и ответственный орган\n• FR-2.3 кнопка «Подать заявку» (требует входа)'},
+ {t:'Аутентификация (FR-3)',a:'scope',k:'вход войти зайти логин авторизация аутентификация регистрация эцп egov ncalayer нуц иин бин подпись',
+  x:'Вход в систему:\n• FR-3.1 заявитель — через ЭЦП НУЦ РК (NCALayer) и/или eGov\n• FR-3.2 сотрудники — только по ЭЦП и с ролью от администратора\n• FR-3.3 ИИН/БИН, ФИО и наименование подтягиваются из подписи автоматически'},
+ {t:'Подача заявки (FR-4)',a:'flow',k:'заявка подать подача мастер шаг документ файл загрузка pdf jpg размер мб черновик номер вирус',
+  x:'Подача заявки:\n• FR-4.1 мастер: выбор участка → данные заявителя → документы → проверка → подпись ЭЦП → отправка\n• FR-4.2 перечень документов настраивает администратор\n• FR-4.3 файлы PDF, JPG, PNG, до 20 МБ, проверка на вирусы\n• FR-4.4 автосохранение черновика\n• FR-4.5 уникальный номер заявки'},
+ {t:'Статусы заявки (FR-5)',a:'flow',k:'статус статусная модель этап жизненный цикл переход доработка отказ отозвана договор решение комиссии',
+  x:'Статусная модель:\nЧерновик → Подана → На проверке комплектности → [Возвращена на доработку → Подана повторно] → Принята к рассмотрению → На рассмотрении комиссии → Решение комиссии (рекомендовано / отказано) → Утверждено органом / Отказано → Договор заключён | Отозвана заявителем.\n• FR-5.1 каждый переход фиксируется: кто, когда, комментарий\n• FR-5.2 отказ — только с обоснованием\n• FR-5.3 подсветка заявок с нарушенным сроком\nПопробуйте симуляцию в разделе «Заявка».'},
+ {t:'Кабинет органа (FR-6)',a:'flow',k:'кабинет орган очередь редактор граница рисование импорт пересечение повестка протокол шаблон',
+  x:'Кабинет органа:\n• FR-6.1 очередь заявок с фильтрами по статусу, сроку, участку\n• FR-6.2 редактор участков: рисование границ, импорт файлов, проверка пересечений\n• FR-6.3 повестка комиссии и протокол по шаблону\n• FR-6.4 подписание решения ЭЦП'},
+ {t:'Уведомления (FR-7)',a:'scope',k:'уведомление оповещение email почта sms смс сообщение',
+  x:'Уведомления:\n• FR-7.1 каналы: в кабинете (обязательно), email, SMS (опционально, зависит от бюджета)\n• FR-7.2 события: смена статуса, запрос доработки, приближение срока (для сотрудников)'},
+ {t:'Аналитика (FR-8)',a:'roles',k:'аналитика дашборд отчет отчёт excel сводка статистика выгрузка',
+  x:'Аналитика:\n• FR-8.1 дашборд: участки и заявки по статусам, средний срок рассмотрения, доля отказов с причинами — по району и области\n• FR-8.2 выгрузка отчётов в Excel'},
+ {t:'Журнал аудита (FR-9)',a:'scope',k:'аудит журнал лог логирование действие хранение append',
+  x:'Журнал аудита:\n• FR-9.1 логируются вход, просмотр ПД, изменения участков и заявок, смена ролей\n• FR-9.2 журнал неизменяемый (append-only), хранится ≥ 3 лет\n• FR-9.3 доступ — администратору и проверяющим органам по запросу\nЖурнал защищает и сотрудников, и заявителей при спорах.'},
+ {t:'Нефункциональные требования',a:'scope',k:'нефункциональные производительность скорость доступность безопасность https tls шифрование бэкап резервное копирование мобильный смартфон wcag интернет owasp',
+  x:'Нефункциональные требования:\n• Карта ≤ 3 сек на 4G, ≥ 10 000 участков в районе\n• Доступность 99,5% в месяц\n• HTTPS (TLS 1.2+), шифрование ПД, ролевой доступ, OWASP Top-10\n• Серверы и бэкапы — в РК; бэкап ежедневно, восстановление ≤ 4 ч\n• Казахский и русский, английский — опционально\n• Адаптивность под смартфоны, WCAG 2.1 AA\n• Облегчённый режим карты для слабого интернета'},
+ {t:'Источники данных',a:'data',k:'источник данные кадастр шэп интеграция ручной ввод импорт вариант синхронизация откуда',
+  x:'Источник данных — открытый вопрос. Варианты:\n• **А. Ручной ввод + импорт файлов** — быстрый старт; риск устаревания\n• **Б. Интеграция с кадастром через ШЭП** — официальные данные; долгие согласования\n• **В. Комбинированный** — геометрия из кадастра + характеристики от сотрудников\nРекомендация: MVP на варианте А, архитектура сразу под В.'},
+ {t:'Модель данных',a:'data',k:'модель данных сущность база бд таблица landplot applicant application document decision staff auditlog справочник схема',
+  x:'Основные сущности:\n• Участок (LandPlot) — геометрия, площадь, статус, источник данных…\n• Заявитель (Applicant) — ИИН/БИН, тип, контакты, согласие на ПД\n• Заявка (Application), Документ (Document)\n• История статусов (StatusHistory), Решение (Decision)\n• Пользователь органа (Staff), Журнал аудита (AuditLog)\n• Справочники: адм. единицы, виды угодий, типы документов, причины отказа'},
+ {t:'Технологический стек',a:'data',k:'стек технология frontend backend react next python django fastapi node nestjs postgresql postgis maplibre leaflet s3 облако инфраструктура',
+  x:'Рекомендуемый стек (для обсуждения):\n• Frontend: React / Next.js, MapLibre GL или Leaflet\n• Backend: Python (Django/FastAPI) или Node.js (NestJS)\n• БД: PostgreSQL + **PostGIS** (обязательно — для пересечений и расстояний)\n• Файлы: S3-совместимое хранилище в РК\n• ЭЦП: NCALayer / библиотеки НУЦ РК\n• Инфраструктура: казахстанское или гос. облако'},
+ {t:'Риски',a:'risks',k:'риск опасность угроза проблема снижение митигация',
+  x:'Главные риски:\n• Нет доступа к кадастровым данным (высокая / высокое) → старт на ручном вводе\n• Процедура не совпадает с законом (средняя / высокое) → юрэкспертиза заранее\n• Сотрудники не используют систему (средняя / высокое) → обучение, поддержка\n• Данные устаревают (высокая / среднее) → дата обновления, напоминания\n• Утечка ПД (низкая / высокое) → шифрование, аудит, аттестация ИБ\n• Изменение законодательства (средняя / среднее) → настраиваемые справочники'},
+ {t:'Критерии приёмки MVP',a:'questions',k:'критерий приемка приёмка готов готовность когда принят тест',
+  x:'MVP готов, когда:\n1. В реестре ≥ 90% свободных участков пилотного района\n2. Путь «найти → подать → получить решение» полностью онлайн\n3. Все переходы статусов — в истории и журнале аудита\n4. US-01…US-15 покрыты тестами и приняты заказчиком\n5. Пройдено нагрузочное тестирование\n6. Интерфейс полностью на казахском и русском'},
+ {t:'План этапов',a:'roadmap',k:'этап план срок сроки roadmap график сколько времени длительность разработка дизайн исследование тестирование масштабирование когда',
+  x:'Этапы:\n0. Подготовка PRD — 1–2 нед.\n1. Исследование — 2–3 нед.\n2. Правовая экспертиза и решение по данным — 2–4 нед.\n3. Дизайн (Figma) — 3–4 нед.\n4. Разработка MVP — 3–4 мес.\n5. Тестирование и ИБ — 3–4 нед.\n6. Пилот в 1 районе — 3–6 мес.\n7. Масштабирование\nДо пилота ≈ 6–8 месяцев. Сроки зависят от размера команды.'},
+ {t:'Лог решений',a:'questions',k:'решение принято лог d-01 d-02 d-03 d-04 журнал изменений',
+  x:'Принятые решения:\n• D-01 Страна — Казахстан (принято)\n• D-02 Полный цикл заявки (принято)\n• D-03 MVP на ручном вводе + импорт, архитектура под интеграцию (ждёт подтверждения)\n• D-04 Вход через ЭЦП / eGov (ждёт подтверждения)'},
+ {t:'Открытые вопросы',a:'questions',k:'открытый вопрос неизвестно выяснить q-01 q-05 пилотный район государственный частный',
+  x:'Открытые вопросы:\n• Q-01 Продукт государственный или частный? — заказчик, до этапа 2\n• Q-02 Какой район пилотный? — заказчик/акимат, до этапа 1\n• Q-03 Есть ли цифровые границы участков у акимата? — до этапа 2\n• Q-04 Порядок доступа к данным кадастра — до этапа 2\n• Q-05 Актуальный регламент и сроки рассмотрения — юрист/акимат, до этапа 2'},
+];
+
+const STOP=new Set('а и в во на по с со к ко о об от до из у за для что как какой какая какие каких каково кто где когда ли же бы это эта этот эти то там тут мне меня я ты вы мы он она они нам вам ну да нет не есть был быть будет будут можно нужно надо про расскажи скажи покажи объясни подробнее такое такой есть ещё еще очень все всё весь или а также prd документе документ проекте проект системе система'.split(' '));
+const norm=s=>s.toLowerCase().replace(/ё/g,'е');
+function stem(w){
+  if(/^[a-z]{1,3}-?\d/.test(w))return w;
+  return w.replace(/(иями|ями|ами|ого|его|ому|ему|ыми|ими|ией|ия|ие|ий|ый|ой|ая|яя|ое|ее|ые|ах|ях|ам|ям|ом|ем|ов|ев|ей|ую|юю|а|я|о|е|и|ы|у|ю|ь)$/,'').slice(0,7);
+}
+const tokens=s=>norm(s).split(/[^a-zа-я0-9\-]+/i).filter(w=>w.length>1&&!STOP.has(w)).map(stem).filter(w=>w.length>1);
+KB.forEach(e=>{e.kt=new Set(tokens(e.k+' '+e.t));e.xt=new Set(tokens(e.x))});
+const DF={};KB.forEach(e=>new Set([...e.kt,...e.xt]).forEach(w=>DF[w]=(DF[w]||0)+1));
+const idf=w=>Math.log(1+KB.length/(DF[w]||KB.length));
+function hit(set,w){if(set.has(w))return 1;if(w.length>=5){const p=w.slice(0,5);for(const s of set)if(s.startsWith(p))return .6}return 0}
+function search(q){
+  const qt=[...new Set(tokens(q))];
+  return KB.map(e=>{let s=0;qt.forEach(w=>{s+=idf(w)*(2*hit(e.kt,w)+hit(e.xt,w))});return {e,s}}).sort((a,b)=>b.s-a.s);
+}
+function fmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')}
+
+const SUGG=['Какие роли в системе?','Какие статусы у заявки?','Что входит в MVP?','Какие главные риски?','Сколько времени до пилота?','Откуда брать данные об участках?','Какие метрики успеха?','Как работает вход через ЭЦП?','Какой стек технологий?','Какие открытые вопросы?'];
+const HELP='Я отвечаю на вопросы по PRD проекта **ЖерТап**: проблема, метрики, роли, карта, заявка и её статусы, MVP, требования, данные, стек, риски, этапы, открытые вопросы.\nНапишите вопрос своими словами или выберите подсказку ниже.';
+
+function reply(q){
+  const n=norm(q).trim();
+  if(/^(привет|здравств|добр(ый|ое|ого)\s|салем|сәлем|hello|hi(?![a-z]))/.test(n))return {h:'Здравствуйте! 👋\n'+HELP};
+  if(/(спасибо|благодар|рахмет)/.test(n))return {h:'Пожалуйста! Если появятся ещё вопросы по PRD — спрашивайте.'};
+  if(/(что ты умеешь|помощь|help|что можешь|кто ты)/.test(n))return {h:HELP};
+  if(/(бюджет|стоимост|цен[аы]|сколько стоит|деньг|зарплат)/.test(n))return {h:'В PRD v0.1 бюджет и стоимость разработки **не указаны**. Есть только ориентиры по срокам (см. «План этапов») и примечание, что SMS-уведомления опциональны и зависят от бюджета.',a:'roadmap'};
+  const r=search(q);
+  if(!r[0]||r[0].s<1.2)return {h:'Не нашёл ответа на этот вопрос в PRD. Попробуйте переформулировать или выберите одну из тем ниже — например, роли, статусы заявки, MVP, риски или этапы.'};
+  const best=r[0].e, also=r.slice(1,3).filter(x=>x.s>=Math.max(1.2,r[0].s*.6)).map(x=>x.e);
+  return {t:best.t,h:best.x,a:best.a,also};
+}
+
+const chatBody=$('#chatBody');
+let history=store('jt-chat')||[];
+function addMsg(m,save=true){
+  const d=document.createElement('div');d.className='msg '+(m.me?'me':'bot');
+  if(m.me)d.textContent=m.h;
+  else{
+    d.innerHTML=(m.t?`<h4>${esc(m.t)}</h4>`:'')+fmt(m.h);
+    if(m.a||(m.also&&m.also.length)){
+      const src=document.createElement('span');src.className='src';
+      if(m.a)src.innerHTML=`<button data-go="${m.a}">Открыть раздел на странице →</button>`;
+      if(m.also&&m.also.length)src.innerHTML+=`${m.a?'<br>':''}Также: `+m.also.map(x=>`<button data-ask="${esc(x.t)}">${esc(x.t)}</button>`).join(', ');
+      d.appendChild(src);
+    }
+  }
+  chatBody.appendChild(d);chatBody.scrollTop=chatBody.scrollHeight;
+  if(save){history.push({me:!!m.me,h:m.h,t:m.t,a:m.a,also:(m.also||[]).map(x=>({t:x.t}))});history=history.slice(-60);store('jt-chat',history)}
+}
+chatBody.addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]');if(g)goTo(g.dataset.go);
+  const a=e.target.closest('[data-ask]');if(a)send(a.dataset.ask);
+});
+function renderChips(){
+  const pool=SUGG.slice().sort(()=>Math.random()-.5).slice(0,5);
+  $('#chips').innerHTML=pool.map(s=>`<button class="chip">${esc(s)}</button>`).join('');
+}
+$('#chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(c)send(c.textContent)});
+let busy=false;
+function send(text){
+  text=text.trim();if(!text||busy)return;
+  busy=true;$('#sendBtn').disabled=true;
+  addMsg({me:true,h:text});$('#chatInput').value='';
+  const t=document.createElement('div');t.className='msg bot typing';t.innerHTML='<i></i><i></i><i></i>';chatBody.appendChild(t);chatBody.scrollTop=chatBody.scrollHeight;
+  setTimeout(()=>{t.remove();addMsg(reply(text));renderChips();busy=false;$('#sendBtn').disabled=false;$('#chatInput').focus()},450+Math.random()*450);
+}
+$('#chatForm').addEventListener('submit',e=>{e.preventDefault();send($('#chatInput').value)});
+function openChat(){$('#chat').classList.add('open');$('#fab').style.display='none';setTimeout(()=>$('#chatInput').focus(),50)}
+function closeChat(){$('#chat').classList.remove('open');$('#fab').style.display=''}
+function clearChat(){history=[];store('jt-chat',[]);chatBody.innerHTML='';addMsg({h:'Здравствуйте! 👋\n'+HELP},false);renderChips()}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#chat').classList.contains('open'))closeChat()});
+if(history.length){history.forEach(m=>addMsg(m,false))}else addMsg({h:'Здравствуйте! 👋\n'+HELP},false);
+renderChips();
+</script>
+</body>
+</html>
